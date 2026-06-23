@@ -1,0 +1,463 @@
+================================================================================
+SKILLSWAP API REFERENCE - FRONTEND GUIDE
+================================================================================
+
+BASE URL: http://localhost:8080/api
+
+AUTHENTICATION
+--------------
+All endpoints except /auth/register and /auth/login require a JWT token.
+Send it as a header on every protected request:
+
+  Authorization: Bearer <token>
+
+The token is returned from login/register responses.
+
+================================================================================
+ENUMS (valid string values to use in requests)
+================================================================================
+
+SkillCategory:   MUSIC | TECH | COOKING | LANGUAGE | FITNESS | ART | OTHER
+SkillLevel:      BEGINNER | INTERMEDIATE | ADVANCED
+SkillType:       TEACH | LEARN
+ExchangeStatus:  PENDING | ACCEPTED | REJECTED | COMPLETED
+SessionMode:     ONLINE | OFFLINE
+SessionStatus:   SCHEDULED | COMPLETED | CANCELLED
+
+================================================================================
+AUTH ENDPOINTS
+================================================================================
+
+POST /api/auth/register
+  Auth required: NO
+  Request body:
+    {
+      "name": "string (required)",
+      "email": "string (required, valid email)",
+      "password": "string (required)"
+    }
+  Response (201):
+    {
+      "token": "string (JWT)",
+      "type": "string",
+      "id": 1,
+      "name": "string",
+      "email": "string"
+    }
+
+------------------------------------------------------------
+
+POST /api/auth/login
+  Auth required: NO
+  Request body:
+    {
+      "email": "string (required, valid email)",
+      "password": "string (required)"
+    }
+  Response (200):
+    {
+      "token": "string (JWT)",
+      "type": "string",
+      "id": 1,
+      "name": "string",
+      "email": "string"
+    }
+
+================================================================================
+PROFILE ENDPOINTS
+================================================================================
+
+GET /api/profile/me
+  Auth required: YES
+  Response (200):
+    {
+      "id": 1,
+      "name": "string",
+      "email": "string",
+      "bio": "string",
+      "city": "string",
+      "teachSkills": [ UserSkillResponse ],
+      "learnSkills": [ UserSkillResponse ],
+      "averageRating": 4.5,
+      "totalRatings": 10
+    }
+
+------------------------------------------------------------
+
+PUT /api/profile/me
+  Auth required: YES
+  Request body (all fields optional):
+    {
+      "name": "string",
+      "bio": "string",
+      "city": "string"
+    }
+  Response (200): ProfileResponse (same as GET /api/profile/me)
+
+------------------------------------------------------------
+
+POST /api/profile/skills
+  Auth required: YES
+  Request body:
+    {
+      "skillId": 1,           (required, ID from /api/skills)
+      "type": "TEACH|LEARN",  (required)
+      "level": "BEGINNER|INTERMEDIATE|ADVANCED" (required)
+    }
+  Response (201):
+    {
+      "id": 1,
+      "skill": { "id": 1, "name": "string", "category": "TECH", "description": "string" },
+      "type": "TEACH",
+      "level": "INTERMEDIATE"
+    }
+
+------------------------------------------------------------
+
+GET /api/profile/skills
+  Auth required: YES
+  Response (200): Array of UserSkillResponse
+    [
+      {
+        "id": 1,
+        "skill": { "id": 1, "name": "string", "category": "TECH", "description": "string" },
+        "type": "TEACH",
+        "level": "INTERMEDIATE"
+      }
+    ]
+
+------------------------------------------------------------
+
+DELETE /api/profile/skills/{userSkillId}
+  Auth required: YES
+  Response (204): No content
+
+================================================================================
+SKILLS ENDPOINTS
+================================================================================
+
+GET /api/skills
+  Auth required: YES
+  Query params (optional):
+    ?category=TECH   (filter by SkillCategory)
+  Response (200): Array of SkillResponse
+    [
+      {
+        "id": 1,
+        "name": "string",
+        "category": "TECH",
+        "description": "string"
+      }
+    ]
+
+------------------------------------------------------------
+
+GET /api/skills/categories
+  Auth required: YES
+  Response (200): Array of category strings
+    ["MUSIC", "TECH", "COOKING", "LANGUAGE", "FITNESS", "ART", "OTHER"]
+
+------------------------------------------------------------
+
+GET /api/skills/{id}
+  Auth required: YES
+  Response (200): SkillResponse
+    {
+      "id": 1,
+      "name": "string",
+      "category": "TECH",
+      "description": "string"
+    }
+
+------------------------------------------------------------
+
+POST /api/skills
+  Auth required: YES
+  Request body:
+    {
+      "name": "string (required)",
+      "category": "TECH",    (required, SkillCategory enum)
+      "description": "string (optional)"
+    }
+  Response (201): SkillResponse
+
+================================================================================
+MATCHES ENDPOINTS
+================================================================================
+
+GET /api/matches
+  Auth required: YES
+  Description: Find all users who share at least one overlapping skill with you
+  Response (200): Array of MatchResponse
+    [
+      {
+        "user": { "id": 1, "name": "string", "email": "string", "bio": "string", "city": "string", "averageRating": 4.2, "totalRatings": 5 },
+        "theyCanTeachMe": [ SkillResponse ],
+        "iCanTeachThem": [ SkillResponse ],
+        "isMutual": true
+      }
+    ]
+
+------------------------------------------------------------
+
+GET /api/matches/mutual
+  Auth required: YES
+  Description: Find matches where both users can teach each other something
+  Response (200): Array of MatchResponse (same shape, isMutual always true)
+
+------------------------------------------------------------
+
+GET /api/matches/{userId}
+  Auth required: YES
+  Description: Check match status between logged-in user and a specific user
+  Response (200): MatchResponse
+
+================================================================================
+EXCHANGES ENDPOINTS
+================================================================================
+
+POST /api/exchanges
+  Auth required: YES
+  Description: Send a skill exchange request to another user
+  Request body:
+    {
+      "receiverId": 2,         (required, target user ID)
+      "offeredSkillId": 1,     (required, skill ID you offer to teach)
+      "wantedSkillId": 3,      (required, skill ID you want to learn)
+      "message": "string"      (optional)
+    }
+  Response (201): ExchangeResponse
+
+------------------------------------------------------------
+
+GET /api/exchanges
+  Auth required: YES
+  Description: Get all exchanges (sent + received) for the logged-in user
+  Response (200): Array of ExchangeResponse
+    [
+      {
+        "id": 1,
+        "requester": { UserResponse },
+        "receiver": { UserResponse },
+        "offeredSkill": { SkillResponse },
+        "wantedSkill": { SkillResponse },
+        "status": "PENDING",
+        "message": "string",
+        "createdAt": "2024-01-01T10:00:00",
+        "updatedAt": "2024-01-01T10:00:00"
+      }
+    ]
+
+------------------------------------------------------------
+
+GET /api/exchanges/sent
+  Auth required: YES
+  Description: Get only exchanges the logged-in user sent
+  Response (200): Array of ExchangeResponse
+
+------------------------------------------------------------
+
+GET /api/exchanges/received
+  Auth required: YES
+  Description: Get only exchange requests received by logged-in user
+  Response (200): Array of ExchangeResponse
+
+------------------------------------------------------------
+
+GET /api/exchanges/{id}
+  Auth required: YES
+  Response (200): ExchangeResponse
+
+------------------------------------------------------------
+
+PUT /api/exchanges/{id}/accept
+  Auth required: YES (must be the receiver)
+  Response (200): ExchangeResponse (status changes to ACCEPTED)
+
+------------------------------------------------------------
+
+PUT /api/exchanges/{id}/reject
+  Auth required: YES (must be the receiver)
+  Response (200): ExchangeResponse (status changes to REJECTED)
+
+------------------------------------------------------------
+
+PUT /api/exchanges/{id}/complete
+  Auth required: YES
+  Response (200): ExchangeResponse (status changes to COMPLETED)
+
+================================================================================
+SESSIONS ENDPOINTS
+================================================================================
+
+POST /api/exchanges/{exchangeId}/sessions
+  Auth required: YES
+  Description: Schedule a session for an accepted exchange
+  Request body:
+    {
+      "dateTime": "2024-06-15T14:00:00",  (required, ISO 8601 format)
+      "durationMinutes": 60,               (required)
+      "mode": "ONLINE|OFFLINE",            (required)
+      "meetLink": "string",                (optional, for ONLINE sessions)
+      "location": "string",                (optional, for OFFLINE sessions)
+      "notes": "string"                    (optional)
+    }
+  Response (201): SessionResponse
+
+------------------------------------------------------------
+
+GET /api/exchanges/{exchangeId}/sessions
+  Auth required: YES
+  Description: Get all sessions for a specific exchange
+  Response (200): Array of SessionResponse
+    [
+      {
+        "id": 1,
+        "exchange": { ExchangeResponse },
+        "scheduledBy": { UserResponse },
+        "dateTime": "2024-06-15T14:00:00",
+        "durationMinutes": 60,
+        "mode": "ONLINE",
+        "meetLink": "string",
+        "location": "string",
+        "notes": "string",
+        "status": "SCHEDULED",
+        "createdAt": "2024-01-01T10:00:00"
+      }
+    ]
+
+------------------------------------------------------------
+
+GET /api/sessions/my-sessions
+  Auth required: YES
+  Description: Get upcoming sessions for the logged-in user
+  Response (200): Array of SessionResponse
+
+------------------------------------------------------------
+
+GET /api/sessions/{id}
+  Auth required: YES
+  Response (200): SessionResponse
+
+------------------------------------------------------------
+
+PUT /api/sessions/{id}/complete
+  Auth required: YES
+  Response (200): SessionResponse (status changes to COMPLETED)
+
+------------------------------------------------------------
+
+PUT /api/sessions/{id}/cancel
+  Auth required: YES
+  Response (200): SessionResponse (status changes to CANCELLED)
+
+================================================================================
+RATINGS ENDPOINTS
+================================================================================
+
+POST /api/sessions/{sessionId}/ratings
+  Auth required: YES
+  Description: Rate a user after a completed session
+  Request body:
+    {
+      "stars": 5,              (required, 1-5)
+      "review": "string"       (optional)
+    }
+  Response (201): RatingResponse
+    {
+      "id": 1,
+      "session": { SessionResponse },
+      "ratedBy": { UserResponse },
+      "ratedTo": { UserResponse },
+      "stars": 5,
+      "review": "string",
+      "createdAt": "2024-01-01T10:00:00"
+    }
+
+------------------------------------------------------------
+
+GET /api/users/{userId}/ratings
+  Auth required: YES
+  Description: Get all ratings received by a specific user
+  Response (200): Array of RatingResponse
+
+------------------------------------------------------------
+
+GET /api/users/{userId}/rating-summary
+  Auth required: YES
+  Description: Get aggregated rating summary for a user
+  Response (200):
+    {
+      "averageStars": 4.3,
+      "totalRatings": 12,
+      "breakdown": {
+        "oneStar": 0,
+        "twoStar": 1,
+        "threeStar": 2,
+        "fourStar": 4,
+        "fiveStar": 5
+      }
+    }
+
+------------------------------------------------------------
+
+GET /api/profile/me/ratings
+  Auth required: YES
+  Description: Get all ratings received by the logged-in user
+  Response (200): Array of RatingResponse
+
+================================================================================
+ERROR RESPONSES
+================================================================================
+
+All errors follow this shape:
+  {
+    "message": "string describing the error",
+    "timestamp": "...",
+    "status": 400|401|403|404|409|...
+  }
+
+Common HTTP status codes:
+  400 - Bad request / validation failure
+  401 - Unauthorized (missing or invalid JWT)
+  403 - Forbidden (you don't own this resource)
+  404 - Resource not found
+  409 - Already exists (duplicate)
+
+================================================================================
+FRONTEND FLOW SUMMARY
+================================================================================
+
+1. AUTH
+   - Register or Login → store token in localStorage/sessionStorage
+   - Attach token to every subsequent request via Authorization header
+
+2. ONBOARDING
+   - GET /api/skills/categories → populate category dropdown
+   - GET /api/skills?category=X → list available skills
+   - POST /api/profile/skills → add skills user can teach or wants to learn
+
+3. DISCOVER / MATCHES
+   - GET /api/matches → show list of potential matches
+   - GET /api/matches/mutual → highlight mutual matches
+   - GET /api/matches/{userId} → check match status for a specific user
+
+4. EXCHANGE
+   - POST /api/exchanges → send a swap request to a matched user
+   - GET /api/exchanges/received → inbox: show incoming requests with accept/reject
+   - GET /api/exchanges/sent → outbox: show sent requests and their status
+   - PUT /api/exchanges/{id}/accept → accept incoming request
+   - PUT /api/exchanges/{id}/reject → reject incoming request
+
+5. SESSION SCHEDULING
+   - POST /api/exchanges/{exchangeId}/sessions → schedule a session (after exchange accepted)
+   - GET /api/sessions/my-sessions → show upcoming sessions dashboard
+   - PUT /api/sessions/{id}/complete → mark session as done
+   - PUT /api/sessions/{id}/cancel → cancel a session
+
+6. RATINGS
+   - POST /api/sessions/{sessionId}/ratings → rate the other user after a completed session
+   - GET /api/users/{userId}/rating-summary → show star rating on user profiles
+   - GET /api/profile/me/ratings → show ratings received on own profile page
+
+================================================================================
