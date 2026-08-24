@@ -1,0 +1,35 @@
+databases:
+  - name: skillswap-db
+    plan: free
+    databaseName: skillswap_db
+    user: skillswap
+
+services:
+  - type: web
+    name: skillswap
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: skillswap-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: skillswap-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: skillswap-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: skillswap-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: skillswap-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
