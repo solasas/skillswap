@@ -1,0 +1,9 @@
+target
+*.iml
+.idea
+.vscode
+.git
+.gitignore
+docs
+*.md
+setup.sh
