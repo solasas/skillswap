@@ -10,5 +10,6 @@ import java.util.List;
 public interface UserSkillRepository extends JpaRepository<UserSkill, Long> {
     List<UserSkill> findByUserIdAndType(Long userId, SkillType type);
     List<UserSkill> findByUserId(Long userId);
+    boolean existsByUserIdAndSkillIdAndType(Long userId, Long skillId, SkillType type);
 }
 

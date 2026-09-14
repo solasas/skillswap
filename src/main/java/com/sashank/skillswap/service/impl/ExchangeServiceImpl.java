@@ -6,11 +6,13 @@ import com.sashank.skillswap.entity.Skill;
 import com.sashank.skillswap.entity.SkillExchange;
 import com.sashank.skillswap.entity.User;
 import com.sashank.skillswap.enums.ExchangeStatus;
+import com.sashank.skillswap.enums.SkillType;
 import com.sashank.skillswap.exception.BadRequestException;
 import com.sashank.skillswap.exception.ResourceNotFoundException;
 import com.sashank.skillswap.repository.SkillExchangeRepository;
 import com.sashank.skillswap.repository.SkillRepository;
 import com.sashank.skillswap.repository.UserRepository;
+import com.sashank.skillswap.repository.UserSkillRepository;
 import com.sashank.skillswap.service.ExchangeService;
 import com.sashank.skillswap.util.DtoMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,9 @@ public class ExchangeServiceImpl implements ExchangeService {
 
     @Autowired
     private SkillRepository skillRepository;
+
+    @Autowired
+    private UserSkillRepository userSkillRepository;
 
     @Autowired
     private DtoMapper dtoMapper;
@@ -49,6 +54,14 @@ public class ExchangeServiceImpl implements ExchangeService {
 
         Skill wantedSkill = skillRepository.findById(request.getWantedSkillId())
                 .orElseThrow(() -> new ResourceNotFoundException("Wanted skill not found"));
+
+        if (!userSkillRepository.existsByUserIdAndSkillIdAndType(requester.getId(), offeredSkill.getId(), SkillType.TEACH)) {
+            throw new BadRequestException("You must be listed as a teacher of the offered skill");
+        }
+
+        if (!userSkillRepository.existsByUserIdAndSkillIdAndType(receiver.getId(), wantedSkill.getId(), SkillType.TEACH)) {
+            throw new BadRequestException("Receiver does not teach the wanted skill");
+        }
 
         SkillExchange exchange = SkillExchange.builder()
                 .requester(requester)
