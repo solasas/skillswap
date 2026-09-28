@@ -1,11 +1,13 @@
 package com.sashank.skillswap.service.impl;
 
+import com.sashank.skillswap.dto.request.ChangePasswordRequest;
 import com.sashank.skillswap.dto.request.UpdateProfileRequest;
 import com.sashank.skillswap.dto.response.ProfileResponse;
 import com.sashank.skillswap.dto.response.UserSkillResponse;
 import com.sashank.skillswap.entity.User;
 import com.sashank.skillswap.entity.UserSkill;
 import com.sashank.skillswap.enums.SkillType;
+import com.sashank.skillswap.exception.BadRequestException;
 import com.sashank.skillswap.exception.ResourceNotFoundException;
 import com.sashank.skillswap.repository.RatingRepository;
 import com.sashank.skillswap.repository.UserRepository;
@@ -13,6 +15,7 @@ import com.sashank.skillswap.repository.UserSkillRepository;
 import com.sashank.skillswap.service.UserService;
 import com.sashank.skillswap.util.DtoMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,6 +31,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private RatingRepository ratingRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private DtoMapper dtoMapper;
@@ -78,6 +84,22 @@ public class UserServiceImpl implements UserService {
         user = userRepository.save(user);
 
         return getProfile(user.getId());
+    }
+
+    @Override
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = getUserById(userId);
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new BadRequestException("New password must be different from the current password");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }
 

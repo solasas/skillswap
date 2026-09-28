@@ -1,6 +1,7 @@
 package com.sashank.skillswap.controller;
 
 import com.sashank.skillswap.dto.request.AddAvailabilityRequest;
+import com.sashank.skillswap.dto.request.ChangePasswordRequest;
 import com.sashank.skillswap.dto.request.UpdateProfileRequest;
 import com.sashank.skillswap.dto.request.AddUserSkillRequest;
 import com.sashank.skillswap.dto.response.AvailabilityResponse;
@@ -41,6 +42,14 @@ public class ProfileController {
             @Valid @RequestBody UpdateProfileRequest request) {
         ProfileResponse profile = userService.updateProfile(userId, request);
         return ResponseEntity.ok(profile);
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<Void> changePassword(
+            @RequestAttribute("userId") Long userId,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(userId, request);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/skills")

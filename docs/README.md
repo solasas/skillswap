@@ -12,6 +12,10 @@ A complete REST API backend for a community skill exchange platform built with S
 - **Session Management**: Schedule and manage teaching sessions for skill exchanges
 - **Rating System**: Rate users after completing sessions with 1-5 star ratings and reviews
 - **Real-time Chat**: WebSocket (STOMP) based messaging between users, backed by persisted message history
+- **User Search & Filtering**: Browse users by skill name, city, proficiency level, minimum rating, and availability
+- **Availability Calendar**: Users can list weekly availability slots, visible on their public profile and searchable
+- **Session Rescheduling**: Propose a new session time; the other participant accepts or rejects it
+- **Change Password**: Authenticated users can change their password after verifying the current one
 
 ## Tech Stack
 
@@ -19,6 +23,7 @@ A complete REST API backend for a community skill exchange platform built with S
 - **Spring Boot 3.2.0**
 - **Spring Security 6.x** (JWT Authentication)
 - **Spring Data JPA**
+- **Spring WebSocket** (STOMP messaging, for real-time chat)
 - **PostgreSQL**
 - **Maven**
 - **Lombok**
@@ -83,6 +88,19 @@ com.sashank.skillswap
 - User rating after session completion
 - 1-5 star rating with optional review
 
+### Message
+- Direct message between two users (sender, receiver, content, read flag)
+- Persisted for both the REST history endpoints and the WebSocket chat
+
+### Availability
+- A user's recurring weekly time slot (day of week, start time, end time)
+- Self-managed; publicly viewable on another user's profile and used by the `availableOnly` search filter
+
+### RescheduleRequest
+- A proposal to move a session to a new date/time
+- Requester, proposed date/time, optional reason, status (PENDING, ACCEPTED, REJECTED)
+- Only one PENDING request allowed per session at a time; only the *other* exchange participant can accept/reject it
+
 ## Enums
 
 - **SkillLevel**: BEGINNER, INTERMEDIATE, ADVANCED
@@ -92,6 +110,8 @@ com.sashank.skillswap
 - **SessionStatus**: SCHEDULED, COMPLETED, CANCELLED
 - **SessionMode**: ONLINE, OFFLINE
 - **UserRole**: USER, ADMIN
+- **RescheduleStatus**: PENDING, ACCEPTED, REJECTED
+- **DayOfWeek** (availability): MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY (Java's standard `java.time.DayOfWeek`, not a custom enum)
 
 ## API Endpoints
 
@@ -102,9 +122,17 @@ com.sashank.skillswap
 ### Profile
 - `GET /api/profile/me` - Get current user profile
 - `PUT /api/profile/me` - Update profile
+- `PUT /api/profile/me/password` - Change password (requires current password)
 - `POST /api/profile/skills` - Add a skill
 - `GET /api/profile/skills` - Get user skills
 - `DELETE /api/profile/skills/{userSkillId}` - Remove a skill
+- `POST /api/profile/availability` - Add a weekly availability slot
+- `GET /api/profile/availability` - Get my availability slots
+- `DELETE /api/profile/availability/{availabilityId}` - Remove an availability slot
+
+### Users
+- `GET /api/users/search?skillName=&city=&level=&minRating=&availableOnly=` - Search/filter users (all params optional and combinable; excludes yourself)
+- `GET /api/users/{userId}/availability` - Get another user's public availability
 
 ### Skills
 - `GET /api/skills` - Get all skills
@@ -134,6 +162,10 @@ com.sashank.skillswap
 - `GET /api/sessions/{id}` - Get session details
 - `PUT /api/sessions/{id}/complete` - Complete session
 - `PUT /api/sessions/{id}/cancel` - Cancel session
+- `POST /api/sessions/{id}/reschedule` - Propose a new date/time `{proposedDateTime, reason?}`
+- `GET /api/sessions/{id}/reschedule-requests` - Get reschedule history for a session
+- `PUT /api/sessions/{id}/reschedule-requests/{requestId}/accept` - Accept a proposal (updates the session's dateTime)
+- `PUT /api/sessions/{id}/reschedule-requests/{requestId}/reject` - Reject a proposal
 
 ### Ratings
 - `POST /api/sessions/{sessionId}/ratings` - Rate a session
@@ -283,6 +315,12 @@ HTTP Status Codes:
 - Cannot rate same session twice
 - Cannot accept/reject non-pending exchanges
 - Only exchange participants can schedule sessions
+- Availability slot start time must be before its end time
+- Only exchange participants can propose a session reschedule, and only on a SCHEDULED session
+- Only one PENDING reschedule request allowed per session at a time
+- Only the *other* exchange participant can accept/reject a reschedule request (not the one who proposed it)
+- Cannot message yourself
+- New password must differ from the current password, and must be at least 6 characters
 
 ## Development Notes
 
@@ -296,12 +334,10 @@ HTTP Status Codes:
 
 - Email notifications
 - Skill reviews/testimonials
-- Session rescheduling
 - Skills endorsements
-- User search/filtering
 - Advanced matching algorithm
-- Real-time chat during sessions
 - Payment integration
+- Activity feed (auto-generated: exchanges accepted, sessions completed, ratings received)
 
 ## License
 
