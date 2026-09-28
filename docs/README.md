@@ -11,6 +11,7 @@ A complete REST API backend for a community skill exchange platform built with S
 - **Skill Exchanges**: Request/accept skill exchanges between users
 - **Session Management**: Schedule and manage teaching sessions for skill exchanges
 - **Rating System**: Rate users after completing sessions with 1-5 star ratings and reviews
+- **Real-time Chat**: WebSocket (STOMP) based messaging between users, backed by persisted message history
 
 ## Tech Stack
 
@@ -139,6 +140,20 @@ com.sashank.skillswap
 - `GET /api/users/{userId}/ratings` - Get user's ratings
 - `GET /api/users/{userId}/rating-summary` - Get rating summary
 - `GET /api/profile/me/ratings` - Get my received ratings
+
+### Messages (REST - history)
+- `POST /api/messages` - Send a message `{receiverId, content}`
+- `GET /api/messages/conversations` - Inbox: last message + unread count per conversation
+- `GET /api/messages/conversations/{otherUserId}` - Full message thread with a user (marks their messages as read)
+- `GET /api/messages/unread-count` - Total unread message count
+
+### Chat (WebSocket - real-time)
+- Connect: `ws://localhost:8080/ws` using a STOMP client, with the JWT sent as a STOMP CONNECT header: `Authorization: Bearer <token>`
+  (native browser `WebSocket` can't set this header on the handshake, so use a STOMP client library such as `@stomp/stompjs` that supports `connectHeaders`)
+- Send a message: publish to `/app/chat.send` with body `{"receiverId": 2, "content": "Hi!"}`
+- Receive messages: subscribe to `/user/queue/messages` (delivered to both sender and receiver)
+- Receive errors: subscribe to `/user/queue/errors`
+- Every message sent over the socket is persisted the same way as `POST /api/messages`, so `/api/messages/conversations/{otherUserId}` always reflects full history
 
 ## Security
 

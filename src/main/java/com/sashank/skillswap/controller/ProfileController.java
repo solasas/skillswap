@@ -1,9 +1,12 @@
 package com.sashank.skillswap.controller;
 
+import com.sashank.skillswap.dto.request.AddAvailabilityRequest;
 import com.sashank.skillswap.dto.request.UpdateProfileRequest;
 import com.sashank.skillswap.dto.request.AddUserSkillRequest;
+import com.sashank.skillswap.dto.response.AvailabilityResponse;
 import com.sashank.skillswap.dto.response.ProfileResponse;
 import com.sashank.skillswap.dto.response.UserSkillResponse;
+import com.sashank.skillswap.service.AvailabilityService;
 import com.sashank.skillswap.service.UserService;
 import com.sashank.skillswap.service.UserSkillService;
 import jakarta.validation.Valid;
@@ -22,6 +25,9 @@ public class ProfileController {
 
     @Autowired
     private UserSkillService userSkillService;
+
+    @Autowired
+    private AvailabilityService availabilityService;
 
     @GetMapping("/me")
     public ResponseEntity<ProfileResponse> getProfile(@RequestAttribute("userId") Long userId) {
@@ -57,6 +63,29 @@ public class ProfileController {
             @RequestAttribute("userId") Long userId,
             @PathVariable Long userSkillId) {
         userSkillService.removeUserSkill(userId, userSkillId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/availability")
+    public ResponseEntity<AvailabilityResponse> addAvailability(
+            @RequestAttribute("userId") Long userId,
+            @Valid @RequestBody AddAvailabilityRequest request) {
+        AvailabilityResponse response = availabilityService.addAvailability(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/availability")
+    public ResponseEntity<List<AvailabilityResponse>> getMyAvailability(
+            @RequestAttribute("userId") Long userId) {
+        List<AvailabilityResponse> availability = availabilityService.getAvailability(userId);
+        return ResponseEntity.ok(availability);
+    }
+
+    @DeleteMapping("/availability/{availabilityId}")
+    public ResponseEntity<Void> removeAvailability(
+            @RequestAttribute("userId") Long userId,
+            @PathVariable Long availabilityId) {
+        availabilityService.removeAvailability(userId, availabilityId);
         return ResponseEntity.noContent().build();
     }
 }

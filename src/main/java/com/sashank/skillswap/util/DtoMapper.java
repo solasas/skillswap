@@ -104,6 +104,47 @@ public class DtoMapper {
                 .build();
     }
 
+    public MessageResponse toMessageResponse(Message message) {
+        if (message == null) {
+            return null;
+        }
+        return MessageResponse.builder()
+                .id(message.getId())
+                .sender(toUserResponse(message.getSender()))
+                .receiver(toUserResponse(message.getReceiver()))
+                .content(message.getContent())
+                .read(message.isRead())
+                .createdAt(message.getCreatedAt())
+                .build();
+    }
+
+    public AvailabilityResponse toAvailabilityResponse(Availability availability) {
+        if (availability == null) {
+            return null;
+        }
+        return AvailabilityResponse.builder()
+                .id(availability.getId())
+                .dayOfWeek(availability.getDayOfWeek())
+                .startTime(availability.getStartTime())
+                .endTime(availability.getEndTime())
+                .build();
+    }
+
+    public RescheduleRequestResponse toRescheduleRequestResponse(RescheduleRequest rescheduleRequest) {
+        if (rescheduleRequest == null) {
+            return null;
+        }
+        return RescheduleRequestResponse.builder()
+                .id(rescheduleRequest.getId())
+                .sessionId(rescheduleRequest.getSession().getId())
+                .requestedBy(toUserResponse(rescheduleRequest.getRequestedBy()))
+                .proposedDateTime(rescheduleRequest.getProposedDateTime())
+                .reason(rescheduleRequest.getReason())
+                .status(rescheduleRequest.getStatus())
+                .createdAt(rescheduleRequest.getCreatedAt())
+                .build();
+    }
+
     public List<UserSkillResponse> toUserSkillResponseList(List<UserSkill> skills) {
         return skills.stream()
                 .map(this::toUserSkillResponse)
